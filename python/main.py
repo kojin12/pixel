@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from routes.createUser import createUser
 import json, os, base64
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
+from routes.createRoom import createRoom
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 users_json_path = os.path.join(current_dir, "..", "Users.json")
@@ -20,6 +21,8 @@ subServer.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+activeRoom = {}
 
 
 @subServer.post("/sub-server/createUser")
@@ -132,3 +135,40 @@ async def getHashedMessage(request: Request):
         )
     )
     return {"decrypted_message": decrypted.decode("utf-8")}
+
+@subServer.post("/sub-server/createRoom")
+async def create_room(request: Request):
+    body = await request.json()
+
+    newRoom = createRoom(body["user1"], body["user2"])
+    roomName = list(newRoom.keys())[0]
+    
+    if roomName not in activeRoom:
+        activeRoom[roomName] = newRoom[roomName]
+
+
+@subServer.websocket("/sub-server/ws/{roomID}/{userID}")
+async def JoinToGroup(websocket: WebSocket, roomID: str, userID: str):
+    await websocket.accept()
+
+
+    if roomID not in activeRoom:
+        await websocket.close(code=1000)
+        return
+    
+    activeRoom[roomID]["connections"][userID] = websocket
+
+    try:
+        while True:
+            message = await websocket.receive_text()
+
+            for uid, conn in activeRoom[roomID]["connections"].items():
+                if uid != userID and uid not in data[userID]["userBlock"]:
+                    await conn.send_text(message)
+
+
+    except WebSocketDisconnect:
+        del activeRoom[roomID]["connections"][userID]
+        if not activeRoom[roomID]["connections"]:
+            del activeRoom[roomID]
+            

@@ -1,6 +1,7 @@
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 
 import base64
 
@@ -50,3 +51,17 @@ class User:
         else:
             return True
     
+
+class AvtiveManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        self.active_connections.append(websocket)
+
+    async def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_message(self, websocket: WebSocket, message: str):
+        await websocket.send_text(message)
+
