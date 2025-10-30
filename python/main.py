@@ -1,104 +1,111 @@
-from flask import Flask,request
-from flask_cors import CORS
-from flask import jsonify
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from routes.createUser import createUser
-import json
-import os
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives import serialization
-
+import json, os, base64
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-users_json_path = os.path.abspath(os.path.join(current_dir, "..", "Users.json"))
+users_json_path = os.path.join(current_dir, "..", "Users.json")
+users_json_path = os.path.abspath(users_json_path)
 
-subServer = Flask(__name__)
-CORS(subServer)
+origins = ["http://localhost", "http://localhost:3000"]
+
+subServer = FastAPI()
+
+subServer.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-@subServer.route("/sub-server/createUser", methods = ["POST"])
-def createUserSubServer():
-    data = request.get_json()
-    
+@subServer.post("/sub-server/createUser")
+async def createUserSubServer(request: Request):
+    data = await request.json()
     createUser(data)
-    
-    return jsonify({"status":"ok"})
+    return {"status": "ok"}
 
-
-@subServer.route("/sub-server/setOnline", methods = ["POST"])
-def setUserOnline():
-    userID = request.get_json()
+async def update_status(user_id: str, status: bool):
     
-    with open(users_json_path, "r", encoding='utf-8') as f:
+    with open(users_json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
         
-    thisUser = data[userID["userID"]]
+    if user_id in data:
+        data[user_id]["statusNetwork"] = status
+        with open(users_json_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        return True
     
-    if userID in data:
-        thisUser["statusNetwork"] = "True"
+    return False
 
-    data.append(thisUser)
+@subServer.post("/sub-server/setOnline")
+async def setUserOnline(request: Request):
+    body = await request.json()
+    success = await update_status(str(body["userID"]), True)
+    print(body["userID"])
+    return {"status": "ok" if success else "user_not_found"}
+
+@subServer.post("/sub-server/setOffline")
+async def setUserOffline(request: Request):
+    body = await request.json()
+    success = await update_status(body["userID"], False)
+    return {"status": "ok" if success else "user_not_found"}
+
+
+@subServer.post("/sub-server/blockUser")
+async def blockUser(request: Request):
+    body = await request.json()
+    user_id = body["User"]
+    blocked_id = body["BlockedUser"]
     
-    with open(users_json_path, "w", encoding='utf-8') as f:
-        json.dump(data)
-        
-    return jsonify({"status":"ok"})
-    
-@subServer.route("/sub-server/setOfline", methods = ["POST"])
-def setUserOfline():
-    userID = request.get_json()
-    
-    with open(users_json_path, "r", encoding='utf-8') as f:
+    with open(users_json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
         
-    thisUser = data[userID["userID"]]
+    if blocked_id not in data[user_id]["userBlock"]:
+        data[user_id]["userBlock"].append(blocked_id)
+            
+    with open(users_json_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+        
+    return {"status": "ok"}
+
+@subServer.post("/sub-server/unblockUser")
+async def unblockUser(request: Request):
+    body = await request.json()
+    user_id = body["User"]
+    blocked_id = body["BlockedUser"]
     
-    if userID in data:
-        thisUser["statusNetwork"] = "False"
-
-    data.append(thisUser)
-    
-    with open(users_json_path, "w", encoding='utf-8') as f:
-        json.dump(data)
-
-    return jsonify({"status":"ok"})
-
-
-@subServer.route("/sub-server/blockUser", methods = ["POST"])
-def blockUser():
-    userID = request.get_json()
-
-    with open(users_json_path, "r", encoding='utf-8') as f:
+    with open(users_json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
-    
-    data[userID["User"]]["userBlock"].append(data[userID["BlockedUser"]])
-    
-    with open(users_json_path, "w", encoding='utf-8') as f:
-        json.dump(data)
+        
+    if user_id in data and blocked_id in data[user_id]["userBlock"]:
+        data[user_id]["userBlock"].remove(blocked_id)
+        
+    with open(users_json_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+        
+    return {"status": "ok"}
 
-    return jsonify({"status":"ok"})
 
-@subServer.route("/sub-server/UnblockUser", methods = ["POST"])
-def UnblockUser():
-    userID = request.get_json()
+@subServer.post("/sub-server/sendHashedMessage")
+async def sendHashedMessage(request: Request):
+    import base64
+    body = await request.json()
+    message_bytes = body["message"].encode("utf-8")
 
-    with open(users_json_path, "r", encoding='utf-8') as f:
-        data = json.load(f)
-    
-    data[userID["User"]]["userBlock"].remove(data[userID["BlockedUser"]])
-    
-    with open(users_json_path, "w", encoding='utf-8') as f:
-        json.dump(data)
+    # Декодируем base64, чтобы получить PEM-текст
+    pub_b64 = body["public_key"].replace('\n', '').replace('\r', '')
+    pub_pem = base64.b64decode(pub_b64)
 
-    return jsonify({"status":"ok"})
+    try:
+        public_key = serialization.load_pem_public_key(pub_pem)
+    except Exception as e:
+        return {"error": f"Failed to load public key: {e}"}
 
-@subServer.route("/sub-server/SendHashedMessage", methods = ["POST"])
-def SendHashedMessage():
-    message = request.get_json()
-    
-    message_bytes = message["message"].encode('utf-8')
-    
-    encrypted_message = message["public_key"].encrypt(
+    encrypted = public_key.encrypt(
         message_bytes,
         padding.OAEP(
             mgf=padding.MGF1(algorithm=hashes.SHA256()),
@@ -106,26 +113,22 @@ def SendHashedMessage():
             label=None
         )
     )
-        
-    return jsonify({"encrypted_message":encrypted_message})
-    
-    
-@subServer.route("/sub-server/GetHashedMessage", methods = ["POST"])
-def GetHashedMessage():
-    message = request.get_json()
-        
-    decrypted_message = message["private_key"].decrypt(
-        message["encrypted_message"],
+    return {"encrypted_message": base64.b64encode(encrypted).decode("utf-8")}
+
+
+@subServer.post("/sub-server/getHashedMessage")
+async def getHashedMessage(request: Request):
+    body = await request.json()
+    enc_bytes = base64.b64decode(body["encrypted_message"])
+    priv_b64 = body["private_key"].replace('\n', '').replace('\r', '')
+    priv_pem = base64.b64decode(priv_b64)
+    private_key = serialization.load_pem_private_key(priv_pem, password=None)
+    decrypted = private_key.decrypt(
+        enc_bytes,
         padding.OAEP(
             mgf=padding.MGF1(algorithm=hashes.SHA256()),
             algorithm=hashes.SHA256(),
             label=None
         )
-            
     )
-    
-    return jsonify({"decrypted_message":decrypted_message})
-
-if __name__ == "__main__":
-    subServer.run(debug=True)
-    
+    return {"decrypted_message": decrypted.decode("utf-8")}

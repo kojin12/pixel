@@ -2,7 +2,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 
-
+import base64
 
 
 class User:
@@ -18,17 +18,19 @@ class User:
         self.blocked_users = []
         
     def getPrivateKey(self):
-        return self.private_key.private_bytes(
+        private_bytes = self.private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=serialization.NoEncryption()
         )
-        
+        return base64.b64encode(private_bytes).decode("utf-8")
+    
     def getPublicKey(self):
-        return self.public_key.public_bytes(
+        public_bytes =  self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
+        return base64.b64encode(public_bytes).decode("utf-8")
         
     def online(self):
         self.statusNetwork = True
@@ -43,7 +45,7 @@ class User:
         self.blocked_users.remove(idUnBlocked)
         
     def isBlocked(self, idChecked):
-        if  idChecked not in self.blocked_users:
+        if idChecked not in self.blocked_users:
             return False
         else:
             return True

@@ -1,4 +1,4 @@
-from logic import User
+from .logic import User
 import json
 import os
 
@@ -8,26 +8,24 @@ users_json_path = os.path.abspath(os.path.join(current_dir, "..", "..", "Users.j
 def createUser(userInfo):
     newUser = User(userInfo["idUser"], userInfo["name"])
     
-    publicKey = newUser.get_public_pem()
+    publicKey = newUser.getPublicKey()
     privateKey = newUser.getPrivateKey()
     
-    newUserMap = {
-        newUser.idUser:{
-            "userName": newUser.name,
-            "userBlock": newUser.blocked_users,
-            "publicKey": publicKey,
-            "privateKey": privateKey,
-            "statusNetwork": newUser.statusNetwork
-        }
 
-    }
+    if not os.path.exists(users_json_path) or os.path.getsize(users_json_path) == 0:
+        data = {}
+    else:
+        with open(users_json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
     
-    with open(users_json_path, "r", encoding='utf-8') as f:
-        data = json.load(f)
-        
-    data.append(newUserMap)
+    data[str(newUser.idUser)] = {
+        "userName": newUser.name,
+        "userBlock": newUser.blocked_users,
+        "publicKey": publicKey,
+        "privateKey": privateKey,
+        "statusNetwork": newUser.statusNetwork
+    }
     
     with open(users_json_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
-        
-        
+
