@@ -1,0 +1,12 @@
+{
+  "user1": {
+    "name": "Bogdan",
+    "blockedUser": [],
+    "statusNetwork": false
+  },
+  "user2": {
+    "name": "Maks",
+    "blockedUser": [],
+    "statusNetwork": false
+  }
+}
