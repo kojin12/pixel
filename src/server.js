@@ -297,4 +297,4 @@ core.post("/api/create-room",async(req,res) => {
 
 //ENDPOINTS
 
-core.listen(PORT, () => {console.log(`https:localhost:${PORT}`)})
+core.listen(PORT, () => { console.log(`https:localhost:${PORT}`) })
