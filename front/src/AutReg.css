@@ -1,0 +1,148 @@
+.MainScreen{
+    width: 100%;
+    min-height: 100vh;
+    position: relative;
+}
+.Circle {
+    margin-left: 50%;
+    top: 50%;
+    min-width: 250px;
+    position: absolute;
+    width: 27%;
+    aspect-ratio: 1 / 1;
+    background-color: rgba(0, 0, 0, 0.8);
+    border-radius: 50%;
+    filter: blur(40px);
+    animation: pulse 3s ease-in-out infinite;
+}
+.text{
+    margin-top: 20px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    animation: fadeIn 2s ease-in-out forwards;
+}
+.formAut {
+    width: 20%;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    min-width: 250px;
+    position: absolute;
+    top: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 15px;
+    border: 0.5px solid #000000;
+    background-color: rgba(255, 255, 255, 0.3);
+    z-index: 3;
+    backdrop-filter: blur(2px);
+
+}
+@keyframes pulse {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.6);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.8;
+    }
+}
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.Inputes {
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 90%;
+    position: absolute;
+    top: 50px;
+}
+.Inputes input{
+    height: 40px;
+    font-size: 13px;
+    outline: none;
+    text-align: center;
+    box-shadow: none;
+    background-color: rgba(255, 255, 255, 0.3);
+    border: 0.5px solid #ffffff62;
+    border-radius: 10px;
+}
+
+input::placeholder{
+    text-align: center;
+    font-size: 16px;
+    text-align: center;
+    
+}
+
+input:focus {
+    border: 2px solid #000;
+    text-align: center;
+    font-size: 15px;
+}
+
+.formAut h3{
+    margin-bottom: 40px;
+}
+
+.check{
+    width: 90%;
+    height: 30px;
+    border-radius: 10px;
+    background-color: #000000;
+    color: #fff;
+    border: none;
+    margin-top: 90%;
+}
+
+.toggleAuth {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    display:flex;
+    flex-direction: column;
+    font-size: 14px;
+    color: #000;
+    justify-content: center;
+}
+
+.toggleBtn {
+    background-color: rgba(255, 255, 255, 0.3);
+    border: 0.5px solid #ffffff62;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    width: 80%;
+    font-size: 14px;
+    background: none;
+    color: #000;
+    transition: all 0.2s ease;
+}
+
+.toggleBtn:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+}

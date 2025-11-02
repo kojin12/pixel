@@ -1,174 +1,64 @@
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
-from routes.createUser import createUser
-import json, os, base64
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from routes.createRoom import createRoom
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse
+from datetime import datetime, timedelta
+import qrcode
+from qrcode.image.styledpil import StyledPilImage
+from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
+from qrcode.image.styles.colormasks import SolidFillColorMask
+from PIL import Image
+import io
+import uuid
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-users_json_path = os.path.join(current_dir, "..", "Users.json")
-users_json_path = os.path.abspath(users_json_path)
 
-origins = ["http://localhost", "http://localhost:3000"]
 
 subServer = FastAPI()
 
-subServer.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+active_qrs = {}
 
-activeRoom = {}
+@subServer.get("/sub-server/generate-qr")
+def generate_qr():
+    token = str(uuid.uuid4())
+    expire_time = datetime.utcnow() + timedelta(minutes=5)
+    active_qrs[token] = expire_time
 
-
-@subServer.post("/sub-server/createUser")
-async def createUserSubServer(request: Request):
-    data = await request.json()
-    createUser(data)
-    return {"status": "ok"}
-
-async def update_status(user_id: str, status: bool):
     
-    with open(users_json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-        
-    if user_id in data:
-        data[user_id]["statusNetwork"] = status
-        with open(users_json_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-        return True
-    
-    return False
+    background = Image.open("back.jpg").convert("RGBA")
+    logo = Image.open("logo.jpg").convert("RGBA")
 
-@subServer.post("/sub-server/setOnline")
-async def setUserOnline(request: Request):
-    body = await request.json()
-    success = await update_status(str(body["userID"]), True)
-    print(body["userID"])
-    return {"status": "ok" if success else "user_not_found"}
-
-@subServer.post("/sub-server/setOffline")
-async def setUserOffline(request: Request):
-    body = await request.json()
-    success = await update_status(body["userID"], False)
-    return {"status": "ok" if success else "user_not_found"}
-
-
-@subServer.post("/sub-server/blockUser")
-async def blockUser(request: Request):
-    body = await request.json()
-    user_id = body["User"]
-    blocked_id = body["BlockedUser"]
-    
-    with open(users_json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-        
-    if blocked_id not in data[user_id]["userBlock"]:
-        data[user_id]["userBlock"].append(blocked_id)
-            
-    with open(users_json_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-        
-    return {"status": "ok"}
-
-@subServer.post("/sub-server/unblockUser")
-async def unblockUser(request: Request):
-    body = await request.json()
-    user_id = body["User"]
-    blocked_id = body["BlockedUser"]
-    
-    with open(users_json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-        
-    if user_id in data and blocked_id in data[user_id]["userBlock"]:
-        data[user_id]["userBlock"].remove(blocked_id)
-        
-    with open(users_json_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-        
-    return {"status": "ok"}
-
-
-@subServer.post("/sub-server/sendHashedMessage")
-async def sendHashedMessage(request: Request):
-    import base64
-    body = await request.json()
-    message_bytes = body["message"].encode("utf-8")
-
-    # Декодируем base64, чтобы получить PEM-текст
-    pub_b64 = body["public_key"].replace('\n', '').replace('\r', '')
-    pub_pem = base64.b64decode(pub_b64)
-
-    try:
-        public_key = serialization.load_pem_public_key(pub_pem)
-    except Exception as e:
-        return {"error": f"Failed to load public key: {e}"}
-
-    encrypted = public_key.encrypt(
-        message_bytes,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
+    # Генерация QR с закруглёнными модулями
+    qr = qrcode.QRCode(
+        error_correction=qrcode.constants.ERROR_CORRECT_H
     )
-    return {"encrypted_message": base64.b64encode(encrypted).decode("utf-8")}
+    qr.add_data(token)
+    qr.make(fit=True)
 
-
-@subServer.post("/sub-server/getHashedMessage")
-async def getHashedMessage(request: Request):
-    body = await request.json()
-    enc_bytes = base64.b64decode(body["encrypted_message"])
-    priv_b64 = body["private_key"].replace('\n', '').replace('\r', '')
-    priv_pem = base64.b64decode(priv_b64)
-    private_key = serialization.load_pem_private_key(priv_pem, password=None)
-    decrypted = private_key.decrypt(
-        enc_bytes,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
+    img_qr = qr.make_image(
+        image_factory=StyledPilImage,
+        color_mask=SolidFillColorMask(back_color=(255,255,255), front_color=(0,0,0))
     )
-    return {"decrypted_message": decrypted.decode("utf-8")}
 
-@subServer.post("/sub-server/createRoom")
-async def create_room(request: Request):
-    body = await request.json()
 
-    newRoom = createRoom(body["user1"], body["user2"])
-    roomName = list(newRoom.keys())[0]
+    img_qr = img_qr.resize(background.size, Image.Resampling.LANCZOS)
     
-    if roomName not in activeRoom:
-        activeRoom[roomName] = newRoom[roomName]
+    logo_size = int(img_qr.size[0] * 0.2)
+    logo = logo.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
 
-
-@subServer.websocket("/sub-server/ws/{roomID}/{userID}")
-async def JoinToGroup(websocket: WebSocket, roomID: str, userID: str):
-    await websocket.accept()
-
-
-    if roomID not in activeRoom:
-        await websocket.close(code=1000)
-        return
     
-    activeRoom[roomID]["connections"][userID] = websocket
+    pos = ((img_qr.size[0] - logo_size) // 2, (img_qr.size[1] - logo_size) // 2)
+    img_qr.paste(logo, pos, logo)
 
-    try:
-        while True:
-            message = await websocket.receive_text()
+   
+    background = background.resize(img_qr.size)
+    combined = Image.alpha_composite(background, img_qr)
 
-            for uid, conn in activeRoom[roomID]["connections"].items():
-                if uid != userID and uid not in data[userID]["userBlock"]:
-                    await conn.send_text(message)
+    
+    buf = io.BytesIO()
+    combined.save(buf, format="PNG")
+    buf.seek(0)
+
+    return StreamingResponse(buf, media_type="image/png")
 
 
-    except WebSocketDisconnect:
-        del activeRoom[roomID]["connections"][userID]
-        if not activeRoom[roomID]["connections"]:
-            del activeRoom[roomID]
-            
+@subServer.post("/sub-server/check-qr")
+def checkQR(request: Request):
+    data = request.get()
