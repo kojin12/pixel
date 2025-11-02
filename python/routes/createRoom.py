@@ -28,6 +28,7 @@ def createRoom(user1ID, user2ID):
                     "keys" : {
                         f"publicKey_{user1ID}": publicKey_user1,
                         f"publicKey_{user2ID}": publicKey_user2
-                    }
+                    },
+                    "messages": {}
                 }
             }

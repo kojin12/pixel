@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mini Chat</title>
+</head>
+<body>
+<h2>Mini Chat</h2>
+
+<div>
+  <h3>Create User</h3>
+  <input type="text" id="newUserID" placeholder="User ID">
+  <button onclick="createUser()">Create User</button>
+</div>
+
+<div>
+  <h3>Create Room</h3>
+  <input type="text" id="user1" placeholder="User 1 ID">
+  <input type="text" id="user2" placeholder="User 2 ID">
+  <button onclick="createRoom()">Create Room</button>
+</div>
+
+<div>
+  <h3>Chat</h3>
+  <input type="text" id="chatUserID" placeholder="Your User ID">
+  <input type="text" id="chatRoomID" placeholder="Chat ID (e.g., 999_000)">
+  <input type="text" id="toUserID" placeholder="To User ID">
+  <input type="text" id="messageText" placeholder="Message">
+  <button onclick="sendMessage()">Send Message</button>
+</div>
+
+<div>
+  <h3>Messages:</h3>
+  <ul id="messages"></ul>
+</div>
+
+<script>
+let ws;
+
+function createUser() {
+  const userID = document.getElementById("newUserID").value;
+  fetch("http://127.0.0.1:8000/sub-server/createUser", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({"idUser":userID,"name":"Bodan"})
+  })
+  .then(res => res.json())
+  .then(data => alert(JSON.stringify(data)));
+}
+
+function createRoom() {
+  const user1 = document.getElementById("user1").value;
+  const user2 = document.getElementById("user2").value;
+  fetch("http://localhost:8000/sub-server/createRoom", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({user1, user2})
+  })
+  .then(res => res.json())
+  .then(data => alert("Room created"));
+}
+
+function connectWebSocket() {
+  const userID = document.getElementById("chatUserID").value;
+  ws = new WebSocket(`ws://localhost:8000/sub-server/ws/${userID}`);
+  
+  ws.onmessage = function(event) {
+    const msg = JSON.parse(event.data);
+    const li = document.createElement("li");
+    li.textContent = `[${msg.from}] ${msg.text}`;
+    document.getElementById("messages").appendChild(li);
+  };
+  
+  ws.onopen = () => console.log("WebSocket connected");
+  ws.onclose = () => console.log("WebSocket disconnected");
+}
+
+function sendMessage() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    connectWebSocket();
+    setTimeout(sendMessage, 100); // ждём соединение
+    return;
+  }
+
+  const chatID = document.getElementById("chatRoomID").value;
+  const toUser = document.getElementById("toUserID").value;
+  const text = document.getElementById("messageText").value;
+
+  ws.send(JSON.stringify({chat_id: chatID, to_user: toUser, text}));
+}
+</script>
+
+</body>
+</html>

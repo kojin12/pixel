@@ -5,12 +5,43 @@ import json, os, base64
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from routes.createRoom import createRoom
+import qrcode
+import secrets
+from fastapi.responses import FileResponse
+
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 users_json_path = os.path.join(current_dir, "..", "Users.json")
 users_json_path = os.path.abspath(users_json_path)
 
-origins = ["http://localhost", "http://localhost:3000"]
+rooms_json_path = os.path.join(current_dir, "..", "Rooms.json")
+rooms_json_path = os.path.abspath(rooms_json_path)
+
+
+
+class UserOnlineMap:
+    def __init__(self):
+        self.onlineUser = {}
+        
+    def ConnectUser(self, websocket: WebSocket, userID: str):
+        self.onlineUser[userID] = websocket
+    
+    def disConnect(self, userID: str):
+        del self.onlineUser[userID]
+        
+onlineUser = UserOnlineMap()
+room_connections = {} 
+
+origins = [
+    "http://localhost:3000",
+    "http://localhost:2000",
+    "http://127.0.0.1:3000",
+    "http://localhost",
+    "http://127.0.0.1",
+    "http://127.0.0.1:2000"
+]
+allow_origins=["*"]
+
 
 subServer = FastAPI()
 
@@ -23,7 +54,7 @@ subServer.add_middleware(
 )
 
 activeRoom = {}
-
+messages = {}
 
 @subServer.post("/sub-server/createUser")
 async def createUserSubServer(request: Request):
@@ -43,6 +74,17 @@ async def update_status(user_id: str, status: bool):
         return True
     
     return False
+
+@subServer.get("/sub-server/autorization/{userID}/{password}")
+async def autorization(userID: str, password: str):
+    with open(users_json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    if userID in data and password == data[userID]["password"]:
+        return {"status": "ok"}
+    return {"status": "error"}
+
+    
+
 
 @subServer.post("/sub-server/setOnline")
 async def setUserOnline(request: Request):
@@ -93,13 +135,14 @@ async def unblockUser(request: Request):
     return {"status": "ok"}
 
 
+
 @subServer.post("/sub-server/sendHashedMessage")
 async def sendHashedMessage(request: Request):
     import base64
     body = await request.json()
     message_bytes = body["message"].encode("utf-8")
 
-    # Декодируем base64, чтобы получить PEM-текст
+
     pub_b64 = body["public_key"].replace('\n', '').replace('\r', '')
     pub_pem = base64.b64decode(pub_b64)
 
@@ -136,39 +179,4 @@ async def getHashedMessage(request: Request):
     )
     return {"decrypted_message": decrypted.decode("utf-8")}
 
-@subServer.post("/sub-server/createRoom")
-async def create_room(request: Request):
-    body = await request.json()
 
-    newRoom = createRoom(body["user1"], body["user2"])
-    roomName = list(newRoom.keys())[0]
-    
-    if roomName not in activeRoom:
-        activeRoom[roomName] = newRoom[roomName]
-
-
-@subServer.websocket("/sub-server/ws/{roomID}/{userID}")
-async def JoinToGroup(websocket: WebSocket, roomID: str, userID: str):
-    await websocket.accept()
-
-
-    if roomID not in activeRoom:
-        await websocket.close(code=1000)
-        return
-    
-    activeRoom[roomID]["connections"][userID] = websocket
-
-    try:
-        while True:
-            message = await websocket.receive_text()
-
-            for uid, conn in activeRoom[roomID]["connections"].items():
-                if uid != userID and uid not in data[userID]["userBlock"]:
-                    await conn.send_text(message)
-
-
-    except WebSocketDisconnect:
-        del activeRoom[roomID]["connections"][userID]
-        if not activeRoom[roomID]["connections"]:
-            del activeRoom[roomID]
-            
