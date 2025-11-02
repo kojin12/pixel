@@ -1,0 +1,182 @@
+/* Общая компоновка */
+.dashboard {
+  display: flex;
+  height: 100vh;
+  background: #e5e9ef;
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* Левая колонка (чаты) */
+.sidebar {
+  width: 300px;
+  background: #ffffff;
+  border-right: 1px solid #d8d8d8;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 16px;
+  font-size: 20px;
+  font-weight: bold;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f7f8fa;
+}
+
+.room-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.room-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: 0.2s;
+  border-radius: 10px;
+  margin: 4px 8px;
+}
+
+.room-item:hover {
+  background: #f0f3f7;
+}
+
+.room-item.active {
+  background: #d7e3ff;
+}
+
+.room-avatar {
+  width: 40px;
+  height: 40px;
+  background: #4e8ef7;
+  color: white;
+  border-radius: 50%;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+}
+
+.room-name {
+  font-weight: 600;
+  color: #333;
+}
+
+/* Инпут для создания комнаты */
+.room-input {
+  display: flex;
+  border-top: 1px solid #e0e0e0;
+  padding: 8px;
+  background: #f9f9f9;
+}
+
+.room-input input {
+  flex: 1;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 8px;
+  outline: none;
+}
+
+.room-input button {
+  margin-left: 8px;
+  background: #4e8ef7;
+  border: none;
+  color: white;
+  font-size: 18px;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.room-input button:hover {
+  background: #3578e5;
+}
+
+/* Правая часть (чат) */
+.chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #eef3fa;
+}
+
+.chat-header {
+  padding: 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  font-weight: bold;
+  color: #333;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.message {
+  margin-bottom: 10px;
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  word-wrap: break-word;
+}
+
+.message.own {
+  background: #4e8ef7;
+  color: white;
+  align-self: flex-end;
+}
+
+.message.other {
+  background: #ffffff;
+  color: #333;
+  align-self: flex-start;
+  border: 1px solid #ddd;
+}
+
+.chat-input {
+  display: flex;
+  border-top: 1px solid #ccc;
+  padding: 10px;
+  background: white;
+}
+
+.chat-input input {
+  flex: 1;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  outline: none;
+}
+
+.chat-input button {
+  margin-left: 8px;
+  background: #4e8ef7;
+  color: white;
+  border: none;
+  padding: 0 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.chat-input button:hover {
+  background: #3578e5;
+}
+
+/* Заглушка */
+.chat-placeholder {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #777;
+  font-size: 18px;
+}

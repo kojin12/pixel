@@ -1,0 +1,43 @@
+{
+  "1": {
+    "name": "bogdan",
+    "blockedUser": [],
+    "statusNetwork": false,
+    "password": "123",
+    "rooms": [
+      "2_1",
+      "1_2"
+    ]
+  },
+  "2": {
+    "name": "maks",
+    "blockedUser": [],
+    "statusNetwork": true,
+    "password": "123",
+    "rooms": [
+      "2_1",
+      "1_2"
+    ]
+  },
+  "3": {
+    "name": "Igor",
+    "blockedUser": [],
+    "statusNetwork": false,
+    "password": "12",
+    "rooms": []
+  },
+  "4": {
+    "name": "vana",
+    "blockedUser": [],
+    "statusNetwork": true,
+    "password": "1234",
+    "rooms": []
+  },
+  "5": {
+    "name": "Leah",
+    "blockedUser": [],
+    "statusNetwork": true,
+    "password": "135642",
+    "rooms": []
+  }
+}
